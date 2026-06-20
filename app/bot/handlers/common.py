@@ -8,6 +8,8 @@ from app.utils.channel_check import check_subscription
 from app.config import settings
 from aiogram.fsm.context import FSMContext
 from app.bot.states import BookingStates
+from app.database.repository import create_booking
+from app.database.engine import async_session_maker
 
 
 router = Router()
@@ -82,6 +84,14 @@ async def enter_phone(message: Message, state: FSMContext):
     ])
     await message.answer(f"Подтвердите запись:", reply_markup=keyboard)
 
+@router.callback_query(F.data == 'confirm_booking', BookingStates.waiting_for_confirmation)
+async def confirm_booking(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
 
+    async with async_session_maker() as session:
+        await create_booking(session, callback.from_user.id, callback.from_user.username, callback.from_user.full_name, data['phone'], data['selected_date'], data['selected_time'])
+        await state.clear()
+        await callback.message.answer('Запись подтверждена!')
+        await callback.answer()
 
 
