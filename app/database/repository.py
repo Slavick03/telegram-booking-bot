@@ -28,3 +28,15 @@ async def create_booking(session, telegram_id, username, full_name, phone, date_
     time_slot.is_booked = True
     session.add(booking)
     await session.commit()
+
+async def get_available_slots(session, date_str):
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+    result_work_day = await session.execute(select(WorkingDay).where(WorkingDay.date == date_obj))
+    working_day = result_work_day.scalar_one_or_none()
+
+    if working_day is None or working_day.is_closed:
+        return []
+    
+    result_time_slot = await session.execute(select(TimeSlot).where(TimeSlot.working_day_id == working_day.id, TimeSlot.is_booked == False))
+    time_slot = result_time_slot.scalars().all()
+    return [slot.time.strftime("%H:%M") for slot in time_slot]

@@ -8,7 +8,7 @@ from app.utils.channel_check import check_subscription
 from app.config import settings
 from aiogram.fsm.context import FSMContext
 from app.bot.states import BookingStates
-from app.database.repository import create_booking
+from app.database.repository import create_booking, get_available_slots
 from app.database.engine import async_session_maker
 
 
@@ -49,10 +49,15 @@ async def book_handler(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith('date_'))
 async def choose_date(callback: CallbackQuery, state: FSMContext):
-    slots = ["10:00", "11:00", "12:00", "13:00", "14:00", "15:00"]
     date_str = callback.data.replace('date_', '')
     await state.update_data(selected_date=date_str)
     await state.set_state(BookingStates.waiting_for_time)
+    async with async_session_maker() as session:
+        slots = await get_available_slots(session, date_str)
+    if not slots:
+        await callback.message.answer('На эту дату нет доступных слотов')
+        await callback.answer()
+        return
     await callback.message.answer(f'Вы выбрали дату:{date_str}\n\nТеперь выберите время:', reply_markup=time_slots_keyboard(slots))
     await callback.answer()
 
