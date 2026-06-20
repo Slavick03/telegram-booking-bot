@@ -8,7 +8,7 @@ from app.utils.channel_check import check_subscription
 from app.config import settings
 from aiogram.fsm.context import FSMContext
 from app.bot.states import BookingStates
-from app.database.repository import create_booking, get_available_slots
+from app.database.repository import create_booking, get_available_slots, get_user_bookings, cancel_booking
 from app.database.engine import async_session_maker
 
 
@@ -99,4 +99,33 @@ async def confirm_booking(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer('Запись подтверждена!')
         await callback.answer()
 
+@router.callback_query(F.data == 'cancel')
+async def cancel_booking_command(callback: CallbackQuery):
+    async with async_session_maker() as session:
+        bookings = await get_user_bookings(session, callback.from_user.id)
+        if not bookings:
+            await callback.message.answer('У вас нет активных записей')
+            await callback.answer()
+            return
+        rows = []
+        for booking in bookings:
+            text = f"{booking.time_slot.working_day.date} {booking.time_slot.time.strftime('%H:%M')}"
+            button = InlineKeyboardButton(text=text, callback_data=f"cancel_booking_{booking.id}")
+            rows.append([button])
+        keyboard = InlineKeyboardMarkup(inline_keyboard=rows)
+        await callback.message.answer('Выберите запись для отмены:', reply_markup=keyboard)
+        await callback.answer()
+        
+@router.callback_query(F.data.startswith('cancel_booking_'))
+async def cancel_booking_button(callback: CallbackQuery):
+    booking_id = int(callback.data.replace('cancel_booking_', ''))
+
+    async with async_session_maker() as session:
+        await cancel_booking(session, booking_id)
+        await callback.message.answer('Запись отменена')
+        await callback.answer()
+
+
+
+    
 

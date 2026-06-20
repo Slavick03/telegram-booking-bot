@@ -1,7 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database.models import User, WorkingDay, TimeSlot, Booking
+from app.database.models import User, WorkingDay, TimeSlot, Booking, BookingStatus
 from datetime import datetime, time
+from sqlalchemy.orm import selectinload
 
 
 async def create_booking(session, telegram_id, username, full_name, phone, date_str, time_str):
@@ -40,3 +41,22 @@ async def get_available_slots(session, date_str):
     result_time_slot = await session.execute(select(TimeSlot).where(TimeSlot.working_day_id == working_day.id, TimeSlot.is_booked == False))
     time_slot = result_time_slot.scalars().all()
     return [slot.time.strftime("%H:%M") for slot in time_slot]
+
+async def get_user_bookings(session, telegram_id):
+    result_user = await session.execute(select(User).where(User.telegram_id == telegram_id))
+    user = result_user.scalar_one_or_none()
+
+    if user is None:
+        return []
+    
+    user_bookings = await session.execute(select(Booking).where(Booking.user_id == user.id, Booking.status == BookingStatus.active).options(selectinload(Booking.time_slot).selectinload(TimeSlot.working_day)))
+    result_booking = user_bookings.scalars().all()
+    return result_booking
+
+async def cancel_booking(session, booking_id):
+    result = await session.execute(select(Booking).where(Booking.id == booking_id).options(selectinload(Booking.time_slot)))
+    booking = result.scalar_one_or_none()
+
+    booking.status = BookingStatus.cancelled
+    booking.time_slot.is_booked = False
+    await session.commit()
