@@ -95,6 +95,8 @@ async def confirm_booking(callback: CallbackQuery, state: FSMContext):
 
     async with async_session_maker() as session:
         await create_booking(session, callback.from_user.id, callback.from_user.username, callback.from_user.full_name, data['phone'], data['selected_date'], data['selected_time'])
+        await callback.bot.send_message(chat_id=settings.ADMIN_TELEGRAM_ID, text=f"Имя: {data['name']}\nТелефон: {data['phone']}\nДата: {data['selected_date']}\nВремя: {data['selected_time']}")
+        await callback.bot.send_message(chat_id=settings.NOTIFICATION_CHANNEL_ID, text=f"Имя: {data['name']}\nТелефон: {data['phone']}\nДата: {data['selected_date']}\nВремя: {data['selected_time']}")
         await state.clear()
         await callback.message.answer('Запись подтверждена!')
         await callback.answer()
@@ -122,6 +124,8 @@ async def cancel_booking_button(callback: CallbackQuery):
 
     async with async_session_maker() as session:
         await cancel_booking(session, booking_id)
+        await callback.bot.send_message(chat_id=settings.ADMIN_TELEGRAM_ID, text=f'❌ Запись отменена!\nПользователь: @{callback.from_user.username}')
+        await callback.bot.send_message(chat_id=settings.NOTIFICATION_CHANNEL_ID, text=f'❌ Запись отменена!\nПользователь: @{callback.from_user.username}')
         await callback.message.answer('Запись отменена')
         await callback.answer()
 

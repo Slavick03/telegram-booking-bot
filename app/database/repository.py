@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.models import User, WorkingDay, TimeSlot, Booking, BookingStatus
-from datetime import datetime, time
+from datetime import datetime, time, date, timedelta
 from sqlalchemy.orm import selectinload
 
 
@@ -60,3 +60,10 @@ async def cancel_booking(session, booking_id):
     booking.status = BookingStatus.cancelled
     booking.time_slot.is_booked = False
     await session.commit()
+
+async def get_upcoming_bookings(session):
+    tomorrow = date.today() + timedelta(days=1)
+
+    result = await session.execute(select(Booking).join(Booking.time_slot).join(TimeSlot.working_day).where(Booking.status == BookingStatus.active, WorkingDay.date == tomorrow).options(selectinload(Booking.time_slot).selectinload(TimeSlot.working_day), selectinload(Booking.user)))
+    bookings = result.scalars().all()
+    return bookings

@@ -2,6 +2,7 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from app.config import settings
 from .bot.handlers import common
+from app.scheduler import setup_scheduler
 
 
 async def main():
@@ -10,6 +11,8 @@ async def main():
     dp  = Dispatcher()
 
     dp.include_router(common.router)
+
+    setup_scheduler(bot)
 
     print('Bot started')
     await dp.start_polling(bot)
