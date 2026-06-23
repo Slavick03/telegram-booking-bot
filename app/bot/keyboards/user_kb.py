@@ -24,6 +24,12 @@ def time_slots_keyboard(slots: list):
         button = InlineKeyboardButton(text=slot, callback_data=callback_data)
         keyboard.append([button])
 
-
-
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def admin_menu():
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='Все записи', callback_data='admin_bookings')],
+        [InlineKeyboardButton(text='Добавить рабочий день', callback_data='admin_add_day')],
+        [InlineKeyboardButton(text='Закрыть день', callback_data='admin_close_day')]
+    ])
+    return keyboard

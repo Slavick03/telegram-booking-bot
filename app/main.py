@@ -1,7 +1,7 @@
 import asyncio
 from aiogram import Bot, Dispatcher
 from app.config import settings
-from .bot.handlers import common
+from .bot.handlers import common, admin
 from app.scheduler import setup_scheduler
 
 
@@ -11,6 +11,7 @@ async def main():
     dp  = Dispatcher()
 
     dp.include_router(common.router)
+    dp.include_router(admin.router)
 
     setup_scheduler(bot)
 
