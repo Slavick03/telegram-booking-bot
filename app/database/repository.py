@@ -16,7 +16,7 @@ async def create_booking(session, telegram_id, username, full_name, phone, date_
         await session.flush()
 
 
-    date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+    date_obj = datetime.strptime(date_str, "%d.%m.%Y").date()
     result_work_day = await session.execute(select(WorkingDay).where(WorkingDay.date == date_obj))
     working_day = result_work_day.scalar_one_or_none()
 
@@ -31,7 +31,7 @@ async def create_booking(session, telegram_id, username, full_name, phone, date_
     await session.commit()
 
 async def get_available_slots(session, date_str):
-    date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+    date_obj = datetime.strptime(date_str, "%d.%m.%Y").date()
     result_work_day = await session.execute(select(WorkingDay).where(WorkingDay.date == date_obj))
     working_day = result_work_day.scalar_one_or_none()
 
@@ -74,7 +74,7 @@ async def get_all_active_bookings(session):
     return bookings
 
 async def add_working_day(session, date_str):
-    date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+    date_obj = datetime.strptime(date_str, '%d.%m.%Y').date()
     working_day = WorkingDay(date=date_obj, is_closed=False)
 
     session.add(working_day)
@@ -90,7 +90,7 @@ async def add_time_slot(session, working_day_id, time_str):
     return time_slot
 
 async def close_working_day(session, date_str):
-    date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+    date_obj = datetime.strptime(date_str, '%d.%m.%Y').date()
 
     result = await session.execute(select(WorkingDay).where(WorkingDay.date == date_obj))
     working_day = result.scalar_one_or_none()

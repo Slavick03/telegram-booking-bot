@@ -10,6 +10,7 @@ from aiogram.fsm.context import FSMContext
 from app.bot.states import BookingStates
 from app.database.repository import create_booking, get_available_slots, get_user_bookings, cancel_booking
 from app.database.engine import async_session_maker
+from app.utils.validators import validate_name, validate_phone, validate_date
 
 
 router = Router()
@@ -47,6 +48,23 @@ async def book_handler(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer('Чтобы записаться к мастеру надо быть подписанным на канал', reply_markup=subscription_keyboard(channel_url))
         await callback.answer()
 
+@router.callback_query(F.data == 'check_subscription')
+async def check_subscription_handler(callback: CallbackQuery, state: FSMContext):
+    bot = callback.bot
+    is_subscribed = await check_subscription(
+        bot, callback.from_user.id,
+        settings.REQUIRED_CHANNEL_ID)
+    
+    if is_subscribed:
+        await state.set_state(BookingStates.waiting_for_date)
+        await callback.message.answer('Отлично! Выберите дату для записи:', reply_markup=generate_calendar())
+        await callback.answer()
+        return
+    else:
+        channel_url = f"https://t.me/{settings.REQUIRED_CHANNEL_ID.replace('@', '')}"
+        await callback.message.answer('Чтобы записаться к мастеру надо быть подписанным на канал', reply_markup=subscription_keyboard(channel_url))
+        await callback.answer()
+
 @router.callback_query(F.data.startswith('date_'))
 async def choose_date(callback: CallbackQuery, state: FSMContext):
     date_str = callback.data.replace('date_', '')
@@ -72,6 +90,9 @@ async def choose_time(callback: CallbackQuery, state: FSMContext):
 @router.message(BookingStates.waiting_for_name)
 async def enter_name(message: Message, state: FSMContext):
     name = message.text
+    if not validate_name(name):
+        await message.answer('Введите корректное имя (только буквы, от 2 до 50 символов):')
+        return
     await state.update_data(name=name)
     await state.set_state(BookingStates.waiting_for_phone)
     await message.answer(f'Введите ваш номер телефона:')
@@ -79,6 +100,9 @@ async def enter_name(message: Message, state: FSMContext):
 @router.message(BookingStates.waiting_for_phone)
 async def enter_phone(message: Message, state: FSMContext):
     phone = message.text
+    if not validate_phone(phone):
+        await message.answer('Введите корректный номер телефона (например: +37369123456):')
+        return
     await state.update_data(phone=phone)
     await state.set_state(BookingStates.waiting_for_confirmation)
     data = await state.get_data()

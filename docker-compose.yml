@@ -13,6 +13,16 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+  bot:
+    build: .
+    container_name: booking_bot
+    env_file: .env
+    environment:
+      POSTGRES_PORT: 5432
+    depends_on:
+      - postgres
+    command: sh -c "alembic upgrade head && python -m app.main"
+    restart: unless-stopped
 
 volumes:
   postgres_data:

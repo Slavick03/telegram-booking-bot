@@ -9,6 +9,7 @@ from app.database.repository import get_all_active_bookings, add_working_day, ad
 from app.database.engine import async_session_maker
 from aiogram.fsm.context import FSMContext
 from app.bot.states import AdminStates
+from app.utils.validators import validate_date
 
 
 router = Router()
@@ -46,11 +47,14 @@ async def admin_add_day(callback: CallbackQuery, state: FSMContext):
         await callback.answer('У вас нет доступа')
         return
     await state.set_state(AdminStates.waiting_for_new_day)
-    await callback.message.answer('Введите дату в формате ГГГГ-ММ-ДД:')
+    await callback.message.answer('Введите дату в формате ДД.ММ.ГГГГ:')
 
 @router.message(AdminStates.waiting_for_new_day)
 async def add_day(message: Message, state: FSMContext):
     date_str = message.text
+    if not validate_date(date_str):
+        await message.answer('Неверный формат даты. Введите в формате ДД.ММ.ГГГГ:')
+        return
     async with async_session_maker() as session:
         working_day = await add_working_day(session, date_str)
         await state.update_data(working_day_id=working_day.id)
@@ -77,11 +81,14 @@ async def close_working_days(callback: CallbackQuery, state: FSMContext):
         return
     
     await state.set_state(AdminStates.waiting_for_close_day)
-    await callback.message.answer('Введите дату для закрытия в формате ГГГГ-ММ-ДД:')
+    await callback.message.answer('Введите дату для закрытия в формате ДД.ММ.ГГГГ:')
 
 @router.message(AdminStates.waiting_for_close_day)
 async def close_day(message: Message, state: FSMContext):
     date_str = message.text
+    if not validate_date(date_str):
+        await message.answer('Неверный формат даты. Введите в формате ДД.ММ.ГГГГ:')
+        return
     async with async_session_maker() as session:
         close_date = await close_working_day(session, date_str)
         if close_date is None:
